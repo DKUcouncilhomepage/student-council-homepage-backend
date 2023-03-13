@@ -15,6 +15,8 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Random;
@@ -27,6 +29,7 @@ public class SMSVerificationService {
     public static final String SMS_AUTH_COMPLETE_SIGN = "OK";
     private static final Random RANDOM = new Random();
 
+    private final Clock clock;
     private final MessageSource messageSource;
     private final DKUAuthService dkuAuthService;
     private final SMSService smsService;
@@ -44,7 +47,8 @@ public class SMSVerificationService {
      * @throws NotSMSAuthorizedException 휴대폰 인증을 하지 않았을 경우
      */
     public String getPhoneNumber(String signupToken) throws NotSMSAuthorizedException {
-        SMSAuth authObj = smsAuthRepository.getAuthPayload(signupToken, SMS_AUTH_NAME, SMSAuth.class)
+        Instant now = Instant.now(clock);
+        SMSAuth authObj = smsAuthRepository.getAuthPayload(signupToken, SMS_AUTH_NAME, SMSAuth.class, now)
                 .orElseThrow(NotSMSSentException::new);
 
         if (!authObj.getCode().equals(SMS_AUTH_COMPLETE_SIGN)) {
@@ -77,7 +81,8 @@ public class SMSVerificationService {
         String code = generateDigitCode(digitCount);
         phoneNumber = phoneNumber.trim().replaceAll("-", "");
 
-        smsAuthRepository.setAuthPayload(signupToken, SMS_AUTH_NAME, new SMSAuth(phoneNumber, code));
+        Instant now = Instant.now(clock);
+        smsAuthRepository.setAuthPayload(signupToken, SMS_AUTH_NAME, new SMSAuth(phoneNumber, code), now);
 
         Locale locale = LocaleContextHolder.getLocale();
         smsService.sendSMS(phoneNumber, messageSource.getMessage("sms.auth-message", new Object[]{code}, locale));
@@ -97,7 +102,8 @@ public class SMSVerificationService {
      * @param code        받은 SMS 코드
      */
     public void verifySMSCode(String signupToken, String code) {
-        SMSAuth authObj = smsAuthRepository.getAuthPayload(signupToken, SMS_AUTH_NAME, SMSAuth.class)
+        Instant now = Instant.now(clock);
+        SMSAuth authObj = smsAuthRepository.getAuthPayload(signupToken, SMS_AUTH_NAME, SMSAuth.class, now)
                 .orElseThrow(NotSMSSentException::new);
 
         if (!authObj.getCode().equals(code.trim())) {
@@ -105,7 +111,7 @@ public class SMSVerificationService {
         }
 
         SMSAuth newAuthObj = new SMSAuth(authObj.getPhone(), SMS_AUTH_COMPLETE_SIGN);
-        smsAuthRepository.setAuthPayload(signupToken, SMS_AUTH_NAME, newAuthObj);
+        smsAuthRepository.setAuthPayload(signupToken, SMS_AUTH_NAME, newAuthObj, now);
     }
 
     public static String generateDigitCode(int digitCount) {

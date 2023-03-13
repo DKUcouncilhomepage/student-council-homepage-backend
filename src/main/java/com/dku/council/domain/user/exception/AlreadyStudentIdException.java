@@ -5,6 +5,6 @@ import org.springframework.http.HttpStatus;
 
 public class AlreadyStudentIdException extends LocalizedMessageException {
     public AlreadyStudentIdException() {
-        super(HttpStatus.NOT_FOUND, "already.student-id");
+        super(HttpStatus.BAD_REQUEST, "already.student-id");
     }
 }

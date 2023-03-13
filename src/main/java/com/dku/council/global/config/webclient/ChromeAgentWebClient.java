@@ -1,4 +1,4 @@
-package com.dku.council.global.config.qualifier;
+package com.dku.council.global.config.webclient;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 

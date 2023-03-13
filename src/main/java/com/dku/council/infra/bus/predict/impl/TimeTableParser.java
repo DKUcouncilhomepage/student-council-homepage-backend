@@ -10,12 +10,15 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 public class TimeTableParser {
+
+    private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("H:mm");
 
     private Duration offset;
     private List<LocalTime> timeTables;
@@ -70,23 +73,6 @@ public class TimeTableParser {
             return;
         }
 
-        if (timeTables.isEmpty()) {
-            timeTables.add(LocalTime.parse(line));
-        } else {
-            String[] token = line.substring(1).split("\\*");
-            if (token.length != 2) {
-                throw new IllegalArgumentException("*기호가 없거나 2개 이상입니다.");
-            }
-
-            int offset = Integer.parseInt(token[0]);
-            int count = Integer.parseInt(token[1]);
-            LocalTime prev = timeTables.get(timeTables.size() - 1);
-
-            for (int i = 0; i < count; i++) {
-                LocalTime next = prev.plusMinutes(offset);
-                timeTables.add(next);
-                prev = next;
-            }
-        }
+        timeTables.add(LocalTime.parse(line, LOCAL_TIME_FORMATTER));
     }
 }

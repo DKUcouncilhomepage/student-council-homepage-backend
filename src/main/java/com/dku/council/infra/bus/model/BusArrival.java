@@ -1,5 +1,6 @@
 package com.dku.council.infra.bus.model;
 
+import com.dku.council.domain.bus.model.Bus;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,11 @@ public class BusArrival {
                 null, null, null,
                 null, null, null,
                 busNo);
+    }
+
+    public static BusArrival predict(Bus bus, int predictTimeSec) {
+        return new BusArrival(BusStatus.PREDICT, 0,
+                bus.getPredictionStationOrder(), predictTimeSec, "",
+                null, null, null, bus.getName());
     }
 }

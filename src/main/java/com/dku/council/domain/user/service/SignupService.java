@@ -1,5 +1,6 @@
 package com.dku.council.domain.user.service;
 
+import com.dku.council.domain.user.exception.AlreadyNicknameException;
 import com.dku.council.domain.user.exception.AlreadyStudentIdException;
 import com.dku.council.domain.user.model.UserStatus;
 import com.dku.council.domain.user.model.dto.request.RequestSignupDto;
@@ -34,6 +35,7 @@ public class SignupService {
         StudentInfo studentInfo = dkuAuthService.getStudentInfo(signupToken);
 
         checkAlreadyStudentId(studentInfo.getStudentId());
+        checkAlreadyNickname(dto.getNickname());
 
         String phone = smsVerificationService.getPhoneNumber(signupToken);
         String encryptedPassword = passwordEncoder.encode(dto.getPassword());
@@ -53,6 +55,12 @@ public class SignupService {
 
         userRepository.save(user);
         deleteSignupAuths(signupToken);
+    }
+
+    public void checkAlreadyNickname(String nickname) {
+        if (userRepository.findByNickname(nickname).isPresent()) {
+            throw new AlreadyNicknameException();
+        }
     }
 
     private Major retrieveMajor(String majorName, String departmentName) {

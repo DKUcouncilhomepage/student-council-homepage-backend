@@ -13,7 +13,6 @@ import com.dku.council.global.auth.jwt.AppAuthentication;
 import com.dku.council.global.auth.role.UserOnly;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,7 +42,6 @@ public class UserController {
 
     /**
      * 회원가입
-     * todo 이메일 인증으로 전환 + 회원가입 토큰 만료시간 정하기
      *
      * @param dto         요청 Body
      * @param signupToken 회원가입 토큰
@@ -52,6 +50,18 @@ public class UserController {
     public void signup(@Valid @RequestBody RequestSignupDto dto,
                        @PathVariable("signup-token") String signupToken) {
         signupService.signup(dto, signupToken);
+    }
+
+    /**
+     * 닉네임이 이미 존재하는지 검증.
+     * 닉네임이 이미 존재하는지 검증합니다. 만약 존재하지 않으면 OK를 반환하고,
+     * 이미 사용중인 경우에는 BAD_REQUEST 오류가 발생합니다.
+     *
+     * @param nickname 닉네임
+     */
+    @GetMapping("/valid")
+    public void validNickname(@RequestParam String nickname) {
+        signupService.checkAlreadyNickname(nickname);
     }
 
     /**

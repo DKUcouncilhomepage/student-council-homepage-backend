@@ -12,6 +12,8 @@ import com.dku.council.infra.dku.model.StudentInfo;
 import com.dku.council.infra.dku.service.DkuAuthenticationService;
 import com.dku.council.infra.dku.service.DkuCrawlerService;
 import com.dku.council.mock.UserMock;
+import com.dku.council.util.ClockUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.util.LinkedMultiValueMap;
 
+import java.time.Clock;
 import java.util.Optional;
 
 import static com.dku.council.domain.user.service.DKUAuthService.DKU_AUTH_NAME;
@@ -45,8 +48,14 @@ class DKUAuthServiceTest {
     @Mock
     private SignupAuthRepository dkuAuthRepository;
 
-    @InjectMocks
+    private final Clock clock = ClockUtil.create();
     private DKUAuthService service;
+
+    @BeforeEach
+    public void setup(){
+        this.service = new DKUAuthService(clock, crawlerService,
+                authenticationService, userRepository, dkuAuthRepository);
+    }
 
 
     @Test
@@ -55,7 +64,7 @@ class DKUAuthServiceTest {
         // given
         StudentInfo info = new StudentInfo("", "", 1, "", "");
         when(dkuAuthRepository.getAuthPayload(any(),
-                eq(DKU_AUTH_NAME), eq(StudentInfo.class)))
+                eq(DKU_AUTH_NAME), eq(StudentInfo.class), any()))
                 .thenReturn(Optional.of(info));
 
         // when
@@ -70,7 +79,7 @@ class DKUAuthServiceTest {
     void getStudentInfoWhenNotFound() {
         // given
         when(dkuAuthRepository.getAuthPayload(any(),
-                eq(DKU_AUTH_NAME), eq(StudentInfo.class)))
+                eq(DKU_AUTH_NAME), eq(StudentInfo.class), any()))
                 .thenReturn(Optional.empty());
 
         // when & then
@@ -113,7 +122,7 @@ class DKUAuthServiceTest {
         // then
         assertThat(response.getStudent().getStudentId()).isEqualTo("1212");
         assertThat(response.getStudent().getStudentName()).isEqualTo("name");
-        verify(dkuAuthRepository).setAuthPayload(any(), eq(DKU_AUTH_NAME), eq(info));
+        verify(dkuAuthRepository).setAuthPayload(any(), eq(DKU_AUTH_NAME), eq(info), any());
     }
 
     @Test

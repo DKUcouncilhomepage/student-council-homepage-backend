@@ -10,7 +10,6 @@ import com.dku.council.infra.bus.provider.ShuttleBusProvider;
 import com.dku.council.infra.bus.provider.TownBusProvider;
 import com.dku.council.mock.BusArrivalMock;
 import com.dku.council.util.ClockUtil;
-import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +23,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 
+import static com.dku.council.infra.bus.service.OpenApiBusService.PREDICTION_LOWER_BOUND;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -53,6 +54,10 @@ class OpenApiBusServiceTest {
     public void setup() {
         List<BusArrivalProvider> providers = List.of(ggBusProvider, townBusProvider, shuttleBusProvider);
         service = new OpenApiBusService(clock, predictService, providers);
+
+        when(ggBusProvider.getProviderPrefix()).thenReturn("GG_");
+        when(townBusProvider.getProviderPrefix()).thenReturn("T_");
+        when(shuttleBusProvider.getProviderPrefix()).thenReturn("DKU_");
     }
 
     @Test
@@ -60,43 +65,34 @@ class OpenApiBusServiceTest {
     public void retrieveBusArrival() {
         // given
         BusStation station = BusStation.DKU_GATE;
-        List<BusArrival> list1 = ggBusArrival();
-        when(ggBusProvider.retrieveBusArrival(station)).thenReturn(list1);
-        when(ggBusProvider.getProviderPrefix()).thenReturn("GG_");
-
-        List<BusArrival> list2 = townBusArrival();
-        when(townBusProvider.retrieveBusArrival(station)).thenReturn(list2);
-        when(townBusProvider.getProviderPrefix()).thenReturn("T_");
-
+        when(ggBusProvider.retrieveBusArrival(station)).thenReturn(ggBusArrival());
+        when(townBusProvider.retrieveBusArrival(station)).thenReturn(townBusArrival());
         when(shuttleBusProvider.retrieveBusArrival(station)).thenReturn(List.of());
-        when(shuttleBusProvider.getProviderPrefix()).thenReturn("DKU_");
 
-        when(predictService.remainingNextBusArrival(any(), eq(station), any())).thenReturn(Duration.ofSeconds(50));
-        when(predictService.remainingNextBusArrival(eq("1101N"), eq(station), any())).thenReturn(null);
+        when(predictService.remainingNextBusArrival(any(), eq(station), any())).thenReturn(Duration.ofSeconds(80));
+        when(predictService.remainingNextBusArrival(eq("102"), eq(station), any())).thenReturn(null);
 
         // when
         List<BusArrival> arrivals = service.retrieveBusArrival(station);
 
         // then
-        HashMap<String, BusStatus> statusMap = expected();
+        HashMap<String, BusStatus> statusMap = expected1();
         assertThat(arrivals.size()).isEqualTo(statusMap.size());
         for (BusArrival arrival : arrivals) {
             BusStatus status = statusMap.remove(arrival.getBusNo());
             if (status == null) {
-                Assertions.fail("not contains: " + arrival.getBusNo());
+                fail("not contains: " + arrival.getBusNo());
             } else {
-                assertThat(status).isEqualTo(arrival.getStatus());
+                assertThat(arrival.getStatus()).isEqualTo(status);
             }
         }
         assertThat(statusMap).isEmpty();
     }
 
-    private static HashMap<String, BusStatus> expected() {
+    private static HashMap<String, BusStatus> expected1() {
         HashMap<String, BusStatus> statusMap = new HashMap<>();
-        statusMap.put("102", BusStatus.RUN);
+        statusMap.put("102", BusStatus.STOP);
         statusMap.put("1101", BusStatus.PREDICT);
-        statusMap.put("1101N", BusStatus.STOP);
-        statusMap.put("7007-1", BusStatus.PREDICT);
         statusMap.put("8100", BusStatus.PREDICT);
         statusMap.put("720-3", BusStatus.RUN);
         statusMap.put("24", BusStatus.RUN);
@@ -122,8 +118,57 @@ class OpenApiBusServiceTest {
                 BusArrivalMock.create("101"),
                 BusArrivalMock.create("1234"),
                 BusArrivalMock.create("720-3", 5),
-                BusArrivalMock.create("720-3", 150),
-                BusArrivalMock.create("102")
+                BusArrivalMock.create("720-3", 150)
         );
+    }
+
+    @Test
+    @DisplayName("예측 시간이 60초 이하일 때는, 다음 버스가 올 때 까지 예측시간 동결")
+    public void retrieveBusArrivalWhenPredictionAtLowerBound() {
+        // given
+        BusStation station = BusStation.DKU_GATE;
+        when(ggBusProvider.retrieveBusArrival(station)).thenReturn(List.of());
+        when(townBusProvider.retrieveBusArrival(station)).thenReturn(List.of());
+        when(shuttleBusProvider.retrieveBusArrival(station)).thenReturn(List.of());
+
+        // when & then
+        when(predictService.remainingNextBusArrival(any(), any(), any())).thenReturn(null);
+        whenPrediction1101(PREDICTION_LOWER_BOUND + 10);
+        checkBusArrival(station, BusStatus.PREDICT, PREDICTION_LOWER_BOUND + 10);
+
+        whenPrediction1101(PREDICTION_LOWER_BOUND - 1);
+        checkBusArrival(station, BusStatus.PREDICT, PREDICTION_LOWER_BOUND);
+
+        whenPrediction1101(500);
+        checkBusArrival(station, BusStatus.PREDICT, PREDICTION_LOWER_BOUND);
+
+        when(ggBusProvider.retrieveBusArrival(station)).thenReturn(List.of(
+                BusArrivalMock.create("1101")
+        ));
+        checkBusArrival(station, BusStatus.RUN, BusArrivalMock.PREDICT_TIME_SEC1);
+
+        when(ggBusProvider.retrieveBusArrival(station)).thenReturn(List.of());
+        checkBusArrival(station, BusStatus.PREDICT, 500);
+    }
+
+    private void whenPrediction1101(int predictSeconds) {
+        when(predictService.remainingNextBusArrival(eq("1101"), eq(BusStation.DKU_GATE), any()))
+                .thenReturn(Duration.ofSeconds(predictSeconds));
+    }
+
+    private void checkBusArrival(BusStation station, BusStatus status, int predictTime) {
+        List<BusArrival> arrivals = service.retrieveBusArrival(station);
+        BusArrival arrival = getArrivalBus(arrivals, "1101");
+        assertThat(arrival.getStatus()).isEqualTo(status);
+        assertThat(arrival.getPredictTimeSec1()).isEqualTo(predictTime);
+    }
+
+    private static BusArrival getArrivalBus(List<BusArrival> arrivals, String busNo) {
+        for (BusArrival arrival : arrivals) {
+            if (arrival.getBusNo().equals(busNo)) {
+                return arrival;
+            }
+        }
+        return null;
     }
 }

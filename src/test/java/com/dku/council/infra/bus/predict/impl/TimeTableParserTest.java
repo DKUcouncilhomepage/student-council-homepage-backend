@@ -23,6 +23,7 @@ class TimeTableParserTest {
     void parse() {
         // given
         List<LocalTime> expected = List.of(
+                LocalTime.of(9, 5),
                 LocalTime.of(10, 5),
                 LocalTime.of(10, 20),
                 LocalTime.of(10, 35),

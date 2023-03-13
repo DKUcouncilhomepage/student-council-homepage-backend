@@ -10,9 +10,8 @@ import java.util.Set;
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public enum BusStation {
     DKU_GATE("단국대정문", "228001978", "BS83664", Set.of(
-            Bus.GG_102, Bus.GG_1101, Bus.GG_1101N,
-            Bus.GG_7007_1, Bus.GG_8100, Bus.GG_720_3,
-            Bus.T_24, Bus.DKU_SHUTTLE_BUS
+            Bus.GG_102, Bus.GG_1101, Bus.GG_8100,
+            Bus.GG_720_3, Bus.T_24, Bus.DKU_SHUTTLE_BUS
     )),
     BEAR_STATUE("곰상", "228001980", "BS130194", Set.of(
             Bus.GG_720_3, Bus.T_24, Bus.DKU_SHUTTLE_BUS

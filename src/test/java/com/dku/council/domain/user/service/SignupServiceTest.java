@@ -1,5 +1,6 @@
 package com.dku.council.domain.user.service;
 
+import com.dku.council.domain.user.exception.AlreadyNicknameException;
 import com.dku.council.domain.user.exception.AlreadyStudentIdException;
 import com.dku.council.domain.user.model.dto.request.RequestSignupDto;
 import com.dku.council.domain.user.model.entity.Major;
@@ -98,6 +99,21 @@ class SignupServiceTest {
 
         // when & then
         assertThrows(AlreadyStudentIdException.class, () ->
+                service.signup(dto, token));
+    }
+
+    @Test
+    @DisplayName("회원가입 실패 - 이미 있는 닉네임인 경우")
+    void failedSignupByAlreadyNickname() {
+        // given
+        User user = UserMock.createDummyMajor();
+
+        when(dkuAuthService.getStudentInfo(token)).thenReturn(info);
+        when(userRepository.findByStudentId(studentId)).thenReturn(Optional.empty());
+        when(userRepository.findByNickname(dto.getNickname())).thenReturn(Optional.of(user));
+
+        // when & then
+        assertThrows(AlreadyNicknameException.class, () ->
                 service.signup(dto, token));
     }
 }
