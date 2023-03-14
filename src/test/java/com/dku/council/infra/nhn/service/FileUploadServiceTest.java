@@ -61,6 +61,23 @@ class FileUploadServiceTest {
         }
     }
 
+    @Test
+    @DisplayName("upload 로직 검증 - 단일")
+    public void uploadFile(){
+        //given
+        String title = "test";
+        String ext = "txt";
+        MultipartFile file = MultipartFileMock.create(title, ext);
+
+        when(authService.requestToken()).thenReturn("token");
+
+        //when
+        String fileId = service.uploadFile(file, "test");
+
+        //then
+        assertFileId(fileId, "test", ext);
+    }
+
     private void assertFileId(String fileId, String prefix, String ext) {
         int firstIndexDash = fileId.indexOf('-');
         int lastIndexDot = fileId.lastIndexOf('.');

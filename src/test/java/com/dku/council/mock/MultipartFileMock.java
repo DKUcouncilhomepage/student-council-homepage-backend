@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MultipartFileMock {
+    public static MultipartFile create(String title, String ext){
+        return new DummyMultipartFile("file", title + "." + ext);
+    }
     public static List<MultipartFile> createList(int size) {
         return createList(size, "txt");
     }

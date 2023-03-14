@@ -9,7 +9,9 @@ import java.util.List;
 public interface FileUploadService {
     ArrayList<UploadedFile> uploadFiles(List<MultipartFile> files, String prefix);
 
+    String uploadFile(MultipartFile file, String prefix);
     void deletePostFiles(List<UploadedFile> files);
+    void deleteFile(String fileId);
 
     String getBaseURL();
 }
